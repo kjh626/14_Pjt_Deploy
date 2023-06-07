@@ -1,0 +1,138 @@
+STS3 열기
+
+* 빌드와 배포
+1. 빌드 : build, war를 만드는 것 (Maven Build)
+2. 배포 : deploy, war를 was에 배포하는 것 (was : Tomcat)
+
+* 빌드
+1. 프로젝트 우클릭 - Run As - 5 Maven Build  (<= 빌드 메뉴를 이용한 수동 빌드)
+2. war 이름
+    - pom.xml  (dependencies 끝나는 곳 밑에 build관련 내용 있다.)
+      1) artifactId : app14
+      2) packaging : war
+      3) version : 1.0.0-BUILD-SNAPSHOT
+   결과- app14-1.0.0-BUILD-SNAPSHOT.war
+※ 빌드로 안 하고 Export 메뉴에서 Web - war로 할 수 있는데 이렇게 하면 로그를 보면서 할 수 없다.. 빌드로 하면 로그 다 보면서 가능
+
+  Goals : clean package 작성 후 Run 클릭 -> 오류없으면 콘솔창에 BUILD SUCCESS
+3. war 위치
+    프로젝트\target\app14-1.0.0-BUILD-SNAPSHOT.war
+
+* 배포 전 선행작업
+1. 포트변경(오라클 사용 대비)
+  우리가 포트 바꿨던 게 Servers-Tomcat-Server.xml 63번 라인에 포트 9090으로 변경
+  우리가 배포할 때 썼던 게 이 Tomcat인가? 아니다!
+  우리가 개발용으로 쓰려고 CATALINA_HOME에서 Tomcat을 이클립스에서 쓰기 위해 카피해온 것이다.(복사본)
+  배포용으로 쓰는 것은 원본 툴이다. 포트번호 안 바뀌어있다.
+  CATAILNA_HOME의 cof의 Tomcat이 원본이다. server.xml에서 8080검색 -> Connector port="8080"
+  원본 Tomcat의 포트번호를 9090으로 변경
+  => CATALINA_HOME/conf/server.xml 열고
+       <Connector port="8080">를 <Connector port="9090">로 수정한다.
+
+* 배포
+1. CATALINA_HOME을 연다.
+2. CATALINA_HOME\webapps 디렉터리를 연다.
+3. CATALINA_HOME\webapps 디렉터리를에 파일을 복사해둔다.
+4. Tomcat을 구동한다.
+    1) windows : CATALINA_HOME\bin\startup.bat 파일 실행 (안전하게 하려면 관리자 권한으로 실행)
+    2) linux      : CATALINA_HOME\bin\startup.sh 파일 실행
+    실행하면 명령프롬프트 비슷한 거에 STS 콘솔창에 찍히듯이 log가 찍힌다. (열어둔다)
+    - Tomcat 종료
+    ※ Tomcat을 끌 때는 shutdown.bat(shutdown.sh)을 써야한다. (관리자 권한으로 실행) -> Tomcat 꺼짐.
+    개발중에는 이전과 같이 STS에서 하듯이 Tomcat실행하고 개발이 끝나면 이 방법으로 Tomcat실행
+5. CATALINA_HOME\webapps 디렉터리에 war 파일과 같은 이름의 디렉터리가 생긴다.
+    -> 주소창에 주소 넣으면 여기 들어있는 app14-1.0.0-BUILD-SNAPSHOT 요 폴더의 내용을 보여준다.
+        -> 이게 web root 디렉터리이다.
+
+* 확인
+1. 웹 브라우저를 연다.
+2. 주소를 입력한다.
+    http://localhost:9090/app14-1.0.0-BUILD-SNAPSHOT
+    contextPath가 app14-1.0.0-BUILD-SNAPSHOT 이다.
+
+----------------------------------------------------------------------------------------------------------
+
+webapps의 app14-1.0.0-BUILD-SNAPSHOT 폴더와 war 삭제
+* contextPath가 너무 길다. 줄이자
+* -> Maven Build 결과 war 파일 이름바꾸기
+      - pom.xml
+        <build>
+            <finalName>${artifactId}</finalName>
+            ...
+        </build>
+스프링 프로젝트 폴더의 target에서도 app14-1.0.0-BUILD-SNAPSHOT 폴더와 war 삭제
+-> 다시 Maven Build
+
+* 배포 후 확인
+    http://localhost:9090/app14
+
+★ 톰캣을 껐다 키는 게 중요. 톰캣 끄고 기존에 배포됐던 것 다 지우고, 다시 배포
+    뭔가 바뀌었다 싶으면(코드 한 글자라도 바뀌면) 일단 꺼라.. 그리고 다 지우고 처음부터 새로 해
+
+----------------------------------------------------------------------------------------------------------
+
+STS4(boot) 에서 달라진 점
+contextPath가 주소창에 안 나온다.
+contextPath가 없는 배포 방법은 다르다.
+
+* 컨텍스트 패스가 없는 배포
+  1. (프로젝트 target에서 war파일 복사 후) war 파일의 이름을 ROOT.war 로 바꾼다. 
+  2. CATALINA_HOME\webapps 디렉터리에는 이미 ROOT 디렉터리가 있다.
+     해당 ROOT 디렉터리의 내용을 모두 지운다. (ROOT 폴더 자체를 지운다)
+  3. 배포하고 확인한다.
+     http://localhost:9090
+== 지금 로컬에서 한 작업을 똑같이 서버에서도 하면 된다.(서버는 linux로 되어있다. 지금 더블클릭을 명령어로 해주면 됨.)
+
+----------------------------------------------------------------------------------------------------------
+
+* 자동 빌드 및 배포 툴 jenkins 사용해 보기
+
+1. maven 다운로드
+    1) mvnrepository.com에서 maven compiler plugin 3.8.1 버전을 지원한다.
+    2) pom.xml
+      <properties>
+        <maven-version>3.8.1</maven-version>
+      </properties>
+      <build>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-version}</version>
+        </plugin>
+      </build>
+    3) https://maven.apache.org/에서 3.8.1 버전 다운로드
+       주소 : https://archive.apache.org/dist/maven/maven-3/3.8.1/binaries/
+       (1) windows : apache-maven-3.8.1-bin.zip
+       (2) linux      : apache-maven-3.8.1-bin.tar.gz
+	빌드를 위해서 https://maven.apache.org/
+	Download
+	(메이븐 컴파일러를 쓸 거다. 원래는 이클립스에 있는 플러그인을 썼었음.
+	 메이븐을 다운로드 받을 것임. 지금은 maven-compiler-plugin 2.5.1 이 기본으로 제공되고 있다(pom.xml에)
+	 우리는 3.8.1로 버전을 바꿔서 쓴다.
+	 -> 2.5.1 을 ${maven-version} 으로 수정 . <properties>에 <maven-version>3.8.1</maven-version> 을 추가
+	   -> maven.apache.org의 Download에서 3.8.1버전을 찾아야 함...  Other Releases의 Maven 3 archives를 클릭 -> 3.8.1로 들어간다(Tomcat 다운받을 때랑 비슷. 압축파일 받아서 풀면 끝) -> 윈도우: binaries/apache-maven-3.8.1-bin.zip , 리눅스: binaries/apache-maven-3.8.1-bin.tar.gz
+
+2. apache-maven-3.8.1-bin.zip 파일을 압축 풀어서 MAVEN_HOME을 등록한다.
+    1) 경로 : C:\Program Files\Maven3.8 디렉터리에 압축을 푼다. (폴더 열었을 때 bin폴더가 보여야 한다.)
+    2) 환경변수 등록 후 Path에 %MAVEN_HOME%bin; 추가하기
+        (1) 이름 MAVEN_HOME
+        (2) 경로 : C:\Program Files\Maven3.8
+
+2. 프로젝트에 build 인코딩을 추가한다. (빌드할 때 UTF-8인코딩을 추가한다고 해줘야한다)
+    pom.xml
+      <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+      </properties>
+
+4. Git
+(Git 도 환경변수 잡아서 쓸 수도 있지만, 그렇게 까진 안 함)
+    1) 원격 레파지토리를 만든다.
+    1) 프로젝트를 원격 레파지토리에 push한다.
+※ 우리가 final 프로젝트 할 때는 jenkins로 하지 않을 것이다. application.properties 가 github에 올라가지 않을 것이기 때문에..
+   그래서 jenkins를 쓰려면 application.properties를 .gitignore처리 하면 안 된다.
+   회사에서는 application.properties를 암호화 하고 복호화하는 식으로 한다.
+
+3. jenkins 다운로드 (github에 올라간 소스코드를 그대로 배포한다.
+    1) https://www.jenkins.io/
+    2) LTS (Stable) - Generic Java Package(.war)
+
